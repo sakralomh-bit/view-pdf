@@ -4,11 +4,11 @@
     <link rel="icon" type="image/png" href="https://sakralomh-bit.github.io/view-pdf/pdf/UV%20GULF.ico">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>id_card</title>
+    <title>عرض الوثيقة</title>
     <style>
         body { margin: 0; padding: 0; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: system-ui, -apple-system, sans-serif; }
-        .doc-container { width: 90%; max-width: 900px; height: 85vh; background: #fff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); overflow: hidden; display: flex; justify-content: center; align-items: center; }
-        .doc-content { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .doc-container { width: 90%; max-width: 900px; height: 85vh; background: #fff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); overflow: hidden; display: flex; flex-direction: column; }
+        .doc-content { width: 100%; height: 100%; border: none; object-fit: contain; background: #fff; }
         .message { text-align: center; padding: 40px; color: #555; font-size: 16px; }
         .error { color: #d32f2f; }
         .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 0 auto 15px; }
@@ -19,7 +19,6 @@
     <div class="doc-container" id="container">
         <div class="message">
             <div class="loader"></div>
-            جاري تجهيز المستند للعرض...
         </div>
     </div>
 
@@ -29,31 +28,28 @@
         const container = document.getElementById('container');
 
         if (certificateId) {
+            // ⚠️ استبدل هذا الرابط برابط نشر تطبيق جوجل سكربت الخاص بك
             const appsScriptUrl = 'https://script.google.com/macros/s/AKfycbyPMfMDJNHe3JQ4x2ZiRUKejIoZc3ZSWCbeaAFyKd4HBrEjam-OTo6UjNf-Ba7fP94n/exec'; 
             
             fetch(`${appsScriptUrl}?certificate=${certificateId}`)
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
-                        // عرض ذكي: نجرب الصورة أولاً، ثم PDF
-                        var mimeType = data.mimeType || 'application/pdf';
-                        
-                        if (mimeType.includes('image')) {
-                            container.innerHTML = `<img src="data:${mimeType};base64,${data.base64}" class="doc-content" alt="وثيقة" />`;
+                        // التعامل الذكي مع نوع الملف (صورة أو PDF)
+                        if (data.mimeType.includes('image')) {
+                            container.innerHTML = `<img src="data:${data.mimeType};base64,${data.base64}" class="doc-content" alt="وثيقة" />`;
                         } else {
-                            // لـ PDF نستخدم iframe أو embed
-                            container.innerHTML = `<embed src="data:${mimeType};base64,${data.base64}" class="doc-content" type="${mimeType}" />`;
+                            container.innerHTML = `<embed src="data:${data.mimeType};base64,${data.base64}" class="doc-content" type="${data.mimeType}" />`;
                         }
                     } else {
-                        container.innerHTML = `<p class="message error">️ ${data.message}</p>`;
+                        container.innerHTML = `<p class="message error">⚠️ ${data.message}</p>`;
                     }
                 })
-                .catch((err) => {
-                    console.error(err);
-                    container.innerHTML = `<p class="message error">⚠️ فشل في الاتصال بالخادم.</p>`;
+                .catch(() => {
+                    container.innerHTML = `<p class="message error">⚠️ فشل في الاتصال بالخادم. تحقق من الإنترنت.</p>`;
                 });
         } else {
-            container.innerHTML = `<p class="message error">⚠️ لم يتم تحديد رقم العرض.</p>`;
+            container.innerHTML = `<p class="message error">⚠️ لم يتم تحديد رقم العرض في الرابط.</p>`;
         }
     </script>
 </body>
