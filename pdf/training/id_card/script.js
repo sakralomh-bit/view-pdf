@@ -8,7 +8,7 @@ const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/
 if (!certificateId) {
     showError('⚠️ لم يتم تحديد رقم العرض في الرابط.');
 } else {
-    const appsScriptUrl = 'https://script.google.com/macros/s/AKfycbyPMfMDJNHe3JQ4x2ZiRUKejIoZc3ZSWCbeaAFyKd4HBrEjam-OTo6UjNf-Ba7fP94n/exec';
+    const appsScriptUrl = 'https://script.google.com/macros/s/AKfycbxd8GVmsIQBp1ZcAY3Fkxq7bukMBdDKYzIB23-0EDAn8FlmB7XYjdA4JGogRV7AqCcp/exec';
 
     fetch(`${appsScriptUrl}?certificate=${certificateId}`)
         .then(res => res.json())
