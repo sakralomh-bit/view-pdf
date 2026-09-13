@@ -4,87 +4,44 @@
     <link rel="icon" type="image/png" href="https://sakralomh-bit.github.io/view-pdf/pdf/UV%20GULF.ico">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>id_card</title>
+    <title>عرض الشهادة</title>
     <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            overflow: hidden;
-            background-color: #f4f5f7;
-            font-family: Arial, sans-serif;
-        }
-        #pdf-container {
-            width: 100%;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-        }
-        iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
-        .message {
-            font-size: 20px;
-            color: #333;
-            text-align: center;
-            padding: 20px;
-        }
-        /* مربع وهمي لإخفاء زر "النافذة الخارجية" الخاص بجوجل درايف تماماً */
-        .hide-popout-mask {
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 70px;
-            height: 60px;
-            background-color: #1e1e1e;
-            z-index: 10;
-        }
+        body { margin: 0; padding: 0; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: system-ui, -apple-system, sans-serif; }
+        .pdf-container { width: 90%; max-width: 900px; height: 85vh; background: #fff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); overflow: hidden; display: flex; flex-direction: column; }
+        iframe { width: 100%; height: 100%; border: none; }
+        .message { text-align: center; padding: 40px; color: #555; }
+        .error { color: #d32f2f; }
     </style>
 </head>
 <body>
-
-    <div id="pdf-container">
-        <div class="hide-popout-mask" id="mask"></div>
-        <div class="message" id="status-message"></div>
+    <div class="pdf-container" id="container">
+        <p class="message">جاري تحميل المستند...</p>
     </div>
 
     <script>
-        // ===> ضع رابط الـ Web App الجديد هنا <===
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyPMfMDJNHe3JQ4x2ZiRUKejIoZc3ZSWCbeaAFyKd4HBrEjam-OTo6UjNf-Ba7fP94n/exec';
-
         const urlParams = new URLSearchParams(window.location.search);
         const certificateId = urlParams.get('certificate');
-
-        const container = document.getElementById('pdf-container');
-        const statusMessage = document.getElementById('status-message');
-        const mask = document.getElementById('mask');
+        const container = document.getElementById('container');
 
         if (certificateId) {
-            fetch(`${SCRIPT_URL}?certificate=${certificateId}`)
-                .then(response => response.json())
+            const appsScriptUrl = 'https://script.google.com/macros/s/AKfycbyPMfMDJNHe3JQ4x2ZiRUKejIoZc3ZSWCbeaAFyKd4HBrEjam-OTo6UjNf-Ba7fP94n/exec'; 
+            
+            fetch(`${appsScriptUrl}?certificate=${certificateId}`)
+                .then(res => res.json())
                 .then(data => {
                     if (data.success) {
-                        // حقن رابط العرض المباشر في الـ iframe
-                        container.innerHTML = `<div class="hide-popout-mask"></div><iframe src="${data.url}" allow="autoplay"></iframe>`;
+                        // استخدام embed يضمن عرض PDF مباشرة في معظم المتصفحات بدون واجهات خارجية
+                        container.innerHTML = `<embed src="${data.url}" type="application/pdf" width="100%" height="100%" />`;
                     } else {
-                        mask.style.display = 'none';
-                        statusMessage.innerHTML = `<span style="color:red;">عذراً:</span> ${data.message}`;
+                        container.innerHTML = `<p class="message error">${data.message}</p>`;
                     }
                 })
-                .catch(error => {
-                    console.error('Fetch Error:', error);
-                    mask.style.display = 'none';
-                    statusMessage.innerHTML = '<span style="color:red;">حدث خطأ في الاتصال بقاعدة البيانات.</span>';
+                .catch(() => {
+                    container.innerHTML = `<p class="message error">فشل في الاتصال بالخادم. تحقق من الاتصال بالإنترنت.</p>`;
                 });
         } else {
-            mask.style.display = 'none';
-            statusMessage.innerHTML = 'الرابط غير مكتمل، يرجى التأكد من وجود رقم العرض.';
+            container.innerHTML = `<p class="message error">لم يتم تحديد رقم العرض في الرابط.</p>`;
         }
     </script>
-
 </body>
 </html>
