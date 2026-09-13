@@ -52,3 +52,14 @@ function renderImage(data) {
 function showError(msg) {
     root.innerHTML = `<div class="message error">${msg}</div>`;
 }
+// فرض 100% تكبير كل 500 ميلي ثانية لمدة 5 ثواني
+let attempts = 0;
+const zoomInterval = setInterval(() => {
+    const zoomInput = document.querySelector('input[aria-label="مستوى التكبير أو التصغير"]');
+    if (zoomInput) {
+        zoomInput.value = '100%';
+        zoomInput.dispatchEvent(new Event('change', { bubbles: true }));
+        attempts++;
+        if (attempts > 10) clearInterval(zoomInterval);
+    }
+}, 500);
