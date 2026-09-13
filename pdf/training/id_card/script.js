@@ -1,3 +1,27 @@
+// منع المتصفح من حفظ حالة التكبير
+if ('scrollRestoration' in history) {
+    history.scrollRestoration = 'manual';
+}
+
+// مسح أي zoom محفوظ لهذا الرابط
+window.addEventListener('beforeunload', () => {
+    sessionStorage.setItem('pdfZoom', '1.0');
+});
+
+// فرض 100% عند التحميل
+window.addEventListener('load', () => {
+    document.body.style.zoom = '100%';
+    document.documentElement.style.zoom = '100%';
+    
+    // تكرار المحاولة عدة مرات
+    let attempts = 0;
+    const forceZoom = setInterval(() => {
+        document.body.style.zoom = '100%';
+        document.body.style.transform = 'scale(1.0)';
+        attempts++;
+        if (attempts > 5) clearInterval(forceZoom);
+    }, 200);
+});
 const root = document.getElementById('root');
 const urlParams = new URLSearchParams(window.location.search);
 const certificateId = urlParams.get('certificate');
