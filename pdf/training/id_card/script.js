@@ -1,49 +1,76 @@
-// 1. تحميل مكتبة PDF.js ديناميكياً لضمان العمل على الجوال
-const script = document.createElement('script');
-script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-script.onload = () => {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    initApp();
-};
-document.head.appendChild(script);
+const root = document.getElementById('root');
+const urlParams = new URLSearchParams(window.location.search);
+const certificateId = urlParams.get('certificate');
 
-function initApp() {
-    const root = document.getElementById('root');
-    const urlParams = new URLSearchParams(window.location.search);
-    const certificateId = urlParams.get('certificate');
+// 1. كشف دقيق للأجهزة المحمولة
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
 
-    if (!certificateId) {
-        showError(root, '⚠️ لم يتم تحديد رقم العرض في الرابط.');
-        return;
-    }
-
+if (!certificateId) {
+    showError('⚠️ لم يتم تحديد رقم العرض في الرابط.');
+} else {
     const appsScriptUrl = 'https://script.google.com/macros/s/AKfycbyPMfMDJNHe3JQ4x2ZiRUKejIoZc3ZSWCbeaAFyKd4HBrEjam-OTo6UjNf-Ba7fP94n/exec';
 
     fetch(`${appsScriptUrl}?certificate=${certificateId}`)
         .then(res => res.json())
         .then(data => {
-            if (!data.success) return showError(root, `⚠️ ${data.message}`);
+            if (!data.success) return showError(`⚠️ ${data.message}`);
+
             if (data.mimeType.includes('image')) {
-                renderImage(root, data);
+                renderImage(data);
             } else {
-                renderPDF(root, data);
+                // 2. توجيه العرض حسب نوع الجهاز
+                if (isMobile) {
+                    loadPDFjsForMobile(data);
+                } else {
+                    renderPDFDesktop(data);
+                }
             }
         })
         .catch((err) => {
             console.error(err);
-            showError(root, '⚠️ فشل في الاتصال بالخادم. تحقق من الإنترنت.');
+            showError('⚠️ فشل في الاتصال بالخادم. تحقق من الإنترنت.');
         });
 }
 
-function base64ToBlob(b64, mime) {
-    const binary = atob(b64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    return new Blob([bytes], { type: mime });
+// ================= دوال الكمبيوتر (الأصلية) =================
+function renderPDFDesktop(data) {
+    const blob = base64ToBlob(data.base64, data.mimeType);
+    const url = URL.createObjectURL(blob);
+    
+    root.innerHTML = `
+        <div class="doc-container">
+            <iframe src="${url}#zoom=100" 
+                    class="doc-content" 
+                    type="application/pdf"
+                    style="transform: scale(1.0); transform-origin: top center;">
+            </iframe>
+        </div>
+    `;
+    
+    setTimeout(() => {
+        const iframe = document.querySelector('iframe');
+        if (iframe) {
+            iframe.style.transform = 'scale(1.0)';
+            iframe.parentElement.style.overflow = 'hidden';
+        }
+    }, 100);
 }
 
-async function renderPDF(root, data) {
-    root.innerHTML = `<div class="doc-container" style="overflow-y:auto; padding:10px;"><div id="pdf-viewer" style="display:flex; flex-direction:column; align-items:center;"></div></div>`;
+// ================= دوال الجوال (الجديدة) =================
+function loadPDFjsForMobile(data) {
+    root.innerHTML = `<div class="doc-container" style="background:#f0f2f5;"><div class="loader"></div><div style="text-align:center; color:#666;">جاري تجهيز العرض للجوال...</div></div>`;
+    
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    script.onload = () => {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        renderPDFMobile(data);
+    };
+    document.head.appendChild(script);
+}
+
+async function renderPDFMobile(data) {
+    root.innerHTML = `<div class="doc-container" style="overflow-y:auto; padding:10px; background:#525659;"><div id="pdf-viewer" style="display:flex; flex-direction:column; align-items:center;"></div></div>`;
     try {
         const blob = base64ToBlob(data.base64, data.mimeType);
         const url = URL.createObjectURL(blob);
@@ -53,7 +80,6 @@ async function renderPDF(root, data) {
         
         for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
             const page = await pdf.getPage(pageNum);
-            // حساب المقياس ليناسب عرض شاشة الجوال تلقائياً
             const containerWidth = Math.min(window.innerWidth - 20, 800);
             const viewport = page.getViewport({ scale: 1 });
             const scale = containerWidth / viewport.width;
@@ -73,17 +99,25 @@ async function renderPDF(root, data) {
         }
     } catch (err) {
         console.error(err);
-        showError(root, '⚠️ تعذّر عرض الشهادة.');
+        showError('⚠️ تعذّر عرض الشهادة على هذا الجهاز.');
     }
 }
 
-function renderImage(root, data) {
+// ================= دوال مشتركة =================
+function base64ToBlob(b64, mime) {
+    const binary = atob(b64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new Blob([bytes], { type: mime });
+}
+
+function renderImage(data) {
     root.innerHTML = `
         <div class="doc-container">
             <img src="data:${data.mimeType};base64,${data.base64}" class="doc-content" style="object-fit: contain; max-width: 100%; max-height: 100%;" alt="وثيقة" />
         </div>`;
 }
 
-function showError(root, msg) {
+function showError(msg) {
     root.innerHTML = `<div class="message error" style="color:#d32f2f; font-weight:bold; text-align:center; padding:20px;">${msg}</div>`;
 }
