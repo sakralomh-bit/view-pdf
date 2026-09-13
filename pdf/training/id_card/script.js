@@ -35,35 +35,25 @@ function renderPDF(data) {
     const blob = base64ToBlob(data.base64, data.mimeType);
     const url = URL.createObjectURL(blob);
     
-    // تهيئة PDF.js
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    
     root.innerHTML = `
-        <div class="doc-container" style="background: #525659; position: fixed; top: 0; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; align-items: center;">
-            <canvas id="pdf-canvas" style="max-width: 100%; max-height: 100%; box-shadow: 0 0 10px rgba(0,0,0,0.5);"></canvas>
+        <div class="doc-container">
+            <iframe src="${url}#zoom=100" 
+                    class="doc-content" 
+                    type="application/pdf"
+                    style="transform: scale(1.0); transform-origin: top center;">
+            </iframe>
         </div>
     `;
     
-    const canvas = document.getElementById('pdf-canvas');
-    const ctx = canvas.getContext('2d');
-    
-    pdfjsLib.getDocument(url).promise.then(pdf => {
-        // عرض الصفحة الأولى فقط (أو عدّل لعرض كل الصفحات)
-        pdf.getPage(1).then(page => {
-            const viewport = page.getViewport({ scale: 1.0 }); // مقياس 100% ثابت
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
-            
-            const renderContext = {
-                canvasContext: ctx,
-                viewport: viewport
-            };
-            
-            page.render(renderContext);
-        });
-    });
+    // منع التكبير بالقوة
+    setTimeout(() => {
+        const iframe = document.querySelector('iframe');
+        if (iframe) {
+            iframe.style.transform = 'scale(1.0)';
+            iframe.parentElement.style.overflow = 'hidden';
+        }
+    }, 100);
 }
-
 function renderImage(data) {
     root.innerHTML = `
         <div class="doc-container">
