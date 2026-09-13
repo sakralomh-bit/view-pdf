@@ -52,14 +52,55 @@ function renderImage(data) {
 function showError(msg) {
     root.innerHTML = `<div class="message error">${msg}</div>`;
 }
-// فرض 100% تكبير كل 500 ميلي ثانية لمدة 5 ثواني
-let attempts = 0;
-const zoomInterval = setInterval(() => {
-    const zoomInput = document.querySelector('input[aria-label="مستوى التكبير أو التصغير"]');
-    if (zoomInput) {
-        zoomInput.value = '100%';
-        zoomInput.dispatchEvent(new Event('change', { bubbles: true }));
-        attempts++;
-        if (attempts > 10) clearInterval(zoomInterval);
-    }
-}, 500);
+// فرض التكبير 100% عند تحميل عارض PDF
+function forceZoomTo100() {
+    setTimeout(() => {
+        // البحث عن حقل التكبير في شريط الأدوات
+        const zoomInput = document.querySelector('input[aria-label="مستوى التكبير أو التصغير"]');
+        
+        if (zoomInput && zoomInput.value !== '100%') {
+            zoomInput.value = '100%';
+            
+            // محاكاة حدث التغيير لتطبيق التكبير
+            zoomInput.dispatchEvent(new Event('change', { bubbles: true }));
+            zoomInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        
+        // البحث عن زر "احتواء ضمن الصفحة" والنقر عليه إذا لزم الأمر
+        const fitButton = document.getElementById('fit');
+        if (fitButton) {
+            // تأكد من أن الزر غير مفعل (لأنه قد يغير التكبير)
+            if (fitButton.getAttribute('aria-pressed') === 'true') {
+                fitButton.click();
+            }
+        }
+    }, 1000); // انتظر ثانية واحدة حتى يتم تحميل العارض بالكامل
+}
+
+// استدعاء الدالة عند تحميل الصفحة
+window.addEventListener('load', forceZoomTo100);
+
+// إعادة التطبيق عند أي تغيير في الصفحة
+window.addEventListener('pageshow', forceZoomTo100);
+
+// مراقبة التغييرات في DOM لفرض التكبير 100%
+const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+        if (mutation.addedNodes.length > 0) {
+            const zoomInput = document.querySelector('input[aria-label="مستوى التكبير أو التصغير"]');
+            if (zoomInput && zoomInput.value !== '100%') {
+                forceZoomTo100();
+            }
+        }
+    });
+});
+
+// بدء المراقبة بعد تحميل الصفحة
+window.addEventListener('load', () => {
+    setTimeout(() => {
+        observer.observe(document.body, { 
+            childList: true, 
+            subtree: true 
+        });
+    }, 2000);
+});
