@@ -7,10 +7,8 @@
     <title>id_card</title>
     <style>
         body { margin: 0; padding: 0; background: #f0f2f5; font-family: system-ui, -apple-system, sans-serif; }
-        
-        /* حاوية الجذر للتحميل والأخطاء */
+
         #root { display: flex; justify-content: center; align-items: center; height: 100vh; }
-        .message { text-align: center; padding: 40px; color: #555; font-size: 16px; background: #fff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
         .error { color: #d32f2f; font-weight: bold; }
         
         .loader {
@@ -19,15 +17,11 @@
             animation: spin 1s linear infinite; margin: 0 auto 15px;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        /* حاوية العرض */
         .doc-container { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #525659; display: flex; justify-content: center; align-items: center; }
         .doc-content { width: 100%; height: 100%; border: none; }
     </style>
 </head>
 <body>
-
-    <!-- ⚠️ هذا العنصر كان مفقوداً ويسبب تعطل الكود -->
     <div id="root">
         <div class="message">
             <div class="loader"></div>
@@ -79,7 +73,6 @@
         }
 
         function renderImage(data) {
-            // عرض الصورة بشكل نظيف ومناسب لبطاقة الهوية
             root.innerHTML = `
                 <div class="doc-container">
                     <img src="data:${data.mimeType};base64,${data.base64}" class="doc-content" style="object-fit: contain; max-width: 100%; max-height: 100%;" alt="وثيقة" />
