@@ -54,23 +54,30 @@
 
         if (certificateId) {
             // إرسال طلب GET لـ Google Apps Script
-            fetch(`${SCRIPT_URL}?id=${certificateId}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // حقن iframe لعرض الـ PDF بدون تغيير الرابط
-                        container.innerHTML = `<iframe src="${data.url}" allow="autoplay"></iframe>`;
-                    } else {
-                        statusMessage.innerHTML = `<span style="color:red;">عذراً:</span> ${data.message}`;
-                    }
-                })
-                .catch(error => {
-                    console.error('Fetch Error:', error);
-                    statusMessage.innerHTML = '<span style="color:red;">حدث خطأ في الاتصال بقاعدة البيانات.</span>';
-                });
+        fetch(`${SCRIPT_URL}?id=${certificateId}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // تحويل Base64 إلى Blob لإنشاء رابط محلي خام
+            const byteCharacters = atob(data.base64);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], {type: 'application/pdf'});
+            
+            // إنشاء رابط وعرضه في iframe (وإخفاء شريط أدوات المتصفح العلوي بإضافة #toolbar=0)
+            const blobUrl = URL.createObjectURL(blob);
+            container.innerHTML = `<iframe src="${blobUrl}#toolbar=0" allow="autoplay"></iframe>`;
         } else {
-            statusMessage.innerHTML = 'الرابط غير مكتمل، يرجى التأكد من وجود رقم الشهادة.';
+            statusMessage.innerHTML = `<span style="color:red;">عذراً:</span> ${data.message}`;
         }
+    })
+    .catch(error => {
+        console.error('Fetch Error:', error);
+        statusMessage.innerHTML = '<span style="color:red;">حدث خطأ في الاتصال بقاعدة البيانات.</span>';
+    });
     </script>
 
 </body>
