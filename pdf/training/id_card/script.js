@@ -34,11 +34,34 @@ function base64ToBlob(b64, mime) {
 function renderPDF(data) {
     const blob = base64ToBlob(data.base64, data.mimeType);
     const url = URL.createObjectURL(blob);
+    
+    // تهيئة PDF.js
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    
     root.innerHTML = `
-        <div class="doc-container">
-            <iframe src="${url}" class="doc-content" type="application/pdf"></iframe>
+        <div class="doc-container" style="background: #525659; position: fixed; top: 0; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; align-items: center;">
+            <canvas id="pdf-canvas" style="max-width: 100%; max-height: 100%; box-shadow: 0 0 10px rgba(0,0,0,0.5);"></canvas>
         </div>
     `;
+    
+    const canvas = document.getElementById('pdf-canvas');
+    const ctx = canvas.getContext('2d');
+    
+    pdfjsLib.getDocument(url).promise.then(pdf => {
+        // عرض الصفحة الأولى فقط (أو عدّل لعرض كل الصفحات)
+        pdf.getPage(1).then(page => {
+            const viewport = page.getViewport({ scale: 1.0 }); // مقياس 100% ثابت
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            
+            const renderContext = {
+                canvasContext: ctx,
+                viewport: viewport
+            };
+            
+            page.render(renderContext);
+        });
+    });
 }
 
 function renderImage(data) {
@@ -52,55 +75,3 @@ function renderImage(data) {
 function showError(msg) {
     root.innerHTML = `<div class="message error">${msg}</div>`;
 }
-// فرض التكبير 100% عند تحميل عارض PDF
-function forceZoomTo100() {
-    setTimeout(() => {
-        // البحث عن حقل التكبير في شريط الأدوات
-        const zoomInput = document.querySelector('input[aria-label="مستوى التكبير أو التصغير"]');
-        
-        if (zoomInput && zoomInput.value !== '100%') {
-            zoomInput.value = '100%';
-            
-            // محاكاة حدث التغيير لتطبيق التكبير
-            zoomInput.dispatchEvent(new Event('change', { bubbles: true }));
-            zoomInput.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-        
-        // البحث عن زر "احتواء ضمن الصفحة" والنقر عليه إذا لزم الأمر
-        const fitButton = document.getElementById('fit');
-        if (fitButton) {
-            // تأكد من أن الزر غير مفعل (لأنه قد يغير التكبير)
-            if (fitButton.getAttribute('aria-pressed') === 'true') {
-                fitButton.click();
-            }
-        }
-    }, 1000); // انتظر ثانية واحدة حتى يتم تحميل العارض بالكامل
-}
-
-// استدعاء الدالة عند تحميل الصفحة
-window.addEventListener('load', forceZoomTo100);
-
-// إعادة التطبيق عند أي تغيير في الصفحة
-window.addEventListener('pageshow', forceZoomTo100);
-
-// مراقبة التغييرات في DOM لفرض التكبير 100%
-const observer = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-        if (mutation.addedNodes.length > 0) {
-            const zoomInput = document.querySelector('input[aria-label="مستوى التكبير أو التصغير"]');
-            if (zoomInput && zoomInput.value !== '100%') {
-                forceZoomTo100();
-            }
-        }
-    });
-});
-
-// بدء المراقبة بعد تحميل الصفحة
-window.addEventListener('load', () => {
-    setTimeout(() => {
-        observer.observe(document.body, { 
-            childList: true, 
-            subtree: true 
-        });
-    }, 2000);
-});
