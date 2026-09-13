@@ -6,21 +6,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>id_card</title>
     <style>
-        .doc-container {
-            position: fixed; top: 55px; left: 0; right: 0; bottom: 0;
-            background: #525659;
-        }
-        .doc-content { width: 100%; height: 100%; border: none; }
-        .error { color: #d32f2f; }
+        body { margin: 0; padding: 0; background: #f0f2f5; font-family: system-ui, -apple-system, sans-serif; }
+        
+        /* حاوية الجذر للتحميل والأخطاء */
+        #root { display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .message { text-align: center; padding: 40px; color: #555; font-size: 16px; background: #fff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
+        .error { color: #d32f2f; font-weight: bold; }
+        
         .loader {
             border: 4px solid #f3f3f3; border-top: 4px solid #3498db;
             border-radius: 50%; width: 30px; height: 30px;
             animation: spin 1s linear infinite; margin: 0 auto 15px;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* حاوية العرض */
+        .doc-container { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #525659; display: flex; justify-content: center; align-items: center; }
+        .doc-content { width: 100%; height: 100%; border: none; }
     </style>
 </head>
 <body>
+
+    <!-- ⚠️ هذا العنصر كان مفقوداً ويسبب تعطل الكود -->
+    <div id="root">
+        <div class="message">
+            <div class="loader"></div>
+            <p>جاري تحميل الوثيقة...</p>
+        </div>
+    </div>
 
     <script>
         const root = document.getElementById('root');
@@ -43,7 +56,10 @@
                         renderPDF(data);
                     }
                 })
-                .catch(() => showError('⚠️ فشل في الاتصال بالخادم. تحقق من الإنترنت.'));
+                .catch((err) => {
+                    console.error(err);
+                    showError('⚠️ فشل في الاتصال بالخادم. تحقق من الإنترنت أو مفتاح API.');
+                });
         }
 
         function base64ToBlob(b64, mime) {
@@ -55,8 +71,7 @@
 
         function renderPDF(data) {
             const blob = base64ToBlob(data.base64, data.mimeType);
-            const url = URL.createObjectURL(blob); // ⚡ أسرع بكثير من base64
-
+            const url = URL.createObjectURL(blob);
             root.innerHTML = `
                 <div class="doc-container">
                     <iframe src="${url}" class="doc-content" type="application/pdf"></iframe>
@@ -65,18 +80,16 @@
         }
 
         function renderImage(data) {
+            // عرض الصورة بشكل نظيف ومناسب لبطاقة الهوية
             root.innerHTML = `
-                <div class="toolbar">
-                    <h3>🖼️ عرض الوثيقة</h3>
-                </div>
                 <div class="doc-container">
-                    <img src="data:${data.mimeType};base64,${data.base64}" class="doc-content" style="object-fit: contain;" alt="وثيقة" />
+                    <img src="data:${data.mimeType};base64,${data.base64}" class="doc-content" style="object-fit: contain; max-width: 100%; max-height: 100%;" alt="وثيقة" />
                 </div>
             `;
         }
 
         function showError(msg) {
-            root.innerHTML = `<p class="message error">${msg}</p>`;
+            root.innerHTML = `<div class="message error">${msg}</div>`;
         }
     </script>
 </body>
