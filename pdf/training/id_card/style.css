@@ -1,6 +1,11 @@
-body { 
+html, body { 
     margin: 0; 
     padding: 0; 
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden; /* يمنع التمرير الذي قد يحفز التكبير */
+    -webkit-text-size-adjust: 100%; /* يمنع تكبير النص التلقائي في Safari/iOS */
+    text-size-adjust: 100%; /* يمنع تكبير النص التلقائي في Chrome/Android */
     background: #f0f2f5; 
     font-family: system-ui, -apple-system, sans-serif; 
 }
@@ -9,7 +14,8 @@ body {
     display: flex; 
     justify-content: center; 
     align-items: center; 
-    height: 100vh; 
+    width: 100%;
+    height: 100%; 
 }
 
 .error { 
