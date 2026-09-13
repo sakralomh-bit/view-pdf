@@ -4,18 +4,22 @@
     <link rel="icon" type="image/png" href="https://sakralomh-bit.github.io/view-pdf/pdf/UV%20GULF.ico">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>عرض الشهادة</title>
+    <title>عرض الوثيقة</title>
     <style>
         body { margin: 0; padding: 0; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: system-ui, -apple-system, sans-serif; }
         .pdf-container { width: 90%; max-width: 900px; height: 85vh; background: #fff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); overflow: hidden; display: flex; flex-direction: column; }
-        iframe { width: 100%; height: 100%; border: none; }
-        .message { text-align: center; padding: 40px; color: #555; }
+        embed { width: 100%; height: 100%; border: none; }
+        .message { text-align: center; padding: 40px; color: #555; font-size: 16px; }
         .error { color: #d32f2f; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 0 auto 15px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
     <div class="pdf-container" id="container">
-        <p class="message">جاري تحميل المستند...</p>
+        <div class="message">
+            <div class="loader"></div>
+        </div>
     </div>
 
     <script>
@@ -24,23 +28,24 @@
         const container = document.getElementById('container');
 
         if (certificateId) {
+            // استبدل هذا الرابط برابط نشر تطبيق جوجل سكربت الخاص بك
             const appsScriptUrl = 'https://script.google.com/macros/s/AKfycbyPMfMDJNHe3JQ4x2ZiRUKejIoZc3ZSWCbeaAFyKd4HBrEjam-OTo6UjNf-Ba7fP94n/exec'; 
             
             fetch(`${appsScriptUrl}?certificate=${certificateId}`)
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
-                        // استخدام embed يضمن عرض PDF مباشرة في معظم المتصفحات بدون واجهات خارجية
-                        container.innerHTML = `<embed src="${data.url}" type="application/pdf" width="100%" height="100%" />`;
+                        // العرض المباشر باستخدام Base64 يلغي أي واجهة خارجية أو تحميل إجباري
+                        container.innerHTML = `<embed src="data:application/pdf;base64,${data.pdfBase64}" type="application/pdf" />`;
                     } else {
-                        container.innerHTML = `<p class="message error">${data.message}</p>`;
+                        container.innerHTML = `<p class="message error">⚠️ ${data.message}</p>`;
                     }
                 })
                 .catch(() => {
-                    container.innerHTML = `<p class="message error">فشل في الاتصال بالخادم. تحقق من الاتصال بالإنترنت.</p>`;
+                    container.innerHTML = `<p class="message error">⚠️ فشل في الاتصال بالخادم. تحقق من الإنترنت.</p>`;
                 });
         } else {
-            container.innerHTML = `<p class="message error">لم يتم تحديد رقم العرض في الرابط.</p>`;
+            container.innerHTML = `<p class="message error">⚠️ لم يتم تحديد رقم العرض في الرابط.</p>`;
         }
     </script>
 </body>
