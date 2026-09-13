@@ -55,3 +55,8 @@ html, body {
     height: 100%; 
     border: none; 
 }
+#pdf-viewer canvas {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
