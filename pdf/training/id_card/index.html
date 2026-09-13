@@ -7,8 +7,8 @@
     <title>عرض الوثيقة</title>
     <style>
         body { margin: 0; padding: 0; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: system-ui, -apple-system, sans-serif; }
-        .pdf-container { width: 90%; max-width: 900px; height: 85vh; background: #fff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); overflow: hidden; display: flex; flex-direction: column; }
-        embed { width: 100%; height: 100%; border: none; }
+        .doc-container { width: 90%; max-width: 900px; height: 85vh; background: #fff; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); overflow: hidden; display: flex; flex-direction: column; }
+        .doc-content { width: 100%; height: 100%; border: none; object-fit: contain; background: #fff; }
         .message { text-align: center; padding: 40px; color: #555; font-size: 16px; }
         .error { color: #d32f2f; }
         .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 0 auto 15px; }
@@ -16,9 +16,10 @@
     </style>
 </head>
 <body>
-    <div class="pdf-container" id="container">
+    <div class="doc-container" id="container">
         <div class="message">
             <div class="loader"></div>
+            جاري تجهيز المستند للعرض...
         </div>
     </div>
 
@@ -28,15 +29,19 @@
         const container = document.getElementById('container');
 
         if (certificateId) {
-            // استبدل هذا الرابط برابط نشر تطبيق جوجل سكربت الخاص بك
+            // ⚠️ استبدل هذا الرابط برابط نشر تطبيق جوجل سكربت الخاص بك
             const appsScriptUrl = 'https://script.google.com/macros/s/AKfycbyPMfMDJNHe3JQ4x2ZiRUKejIoZc3ZSWCbeaAFyKd4HBrEjam-OTo6UjNf-Ba7fP94n/exec'; 
             
             fetch(`${appsScriptUrl}?certificate=${certificateId}`)
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
-                        // العرض المباشر باستخدام Base64 يلغي أي واجهة خارجية أو تحميل إجباري
-                        container.innerHTML = `<embed src="data:application/pdf;base64,${data.pdfBase64}" type="application/pdf" />`;
+                        // التعامل الذكي مع نوع الملف (صورة أو PDF)
+                        if (data.mimeType.includes('image')) {
+                            container.innerHTML = `<img src="data:${data.mimeType};base64,${data.base64}" class="doc-content" alt="وثيقة" />`;
+                        } else {
+                            container.innerHTML = `<embed src="data:${data.mimeType};base64,${data.base64}" class="doc-content" type="${data.mimeType}" />`;
+                        }
                     } else {
                         container.innerHTML = `<p class="message error">⚠️ ${data.message}</p>`;
                     }
