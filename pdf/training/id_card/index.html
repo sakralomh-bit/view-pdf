@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام عرض الملفات</title>
+    <title>عرض الملفات</title>
     <style>
         body, html {
             margin: 0;
@@ -19,6 +19,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            position: relative;
         }
         iframe {
             width: 100%;
@@ -31,16 +32,27 @@
             text-align: center;
             padding: 20px;
         }
+        /* مربع وهمي لإخفاء زر "النافذة الخارجية" الخاص بجوجل درايف تماماً */
+        .hide-popout-mask {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 70px;
+            height: 60px;
+            background-color: #f1f3f4;
+            z-index: 10;
+        }
     </style>
 </head>
 <body>
 
     <div id="pdf-container">
+        <div class="hide-popout-mask" id="mask"></div>
         <div class="message" id="status-message">جاري التحقق وجلب الملف...</div>
     </div>
 
     <script>
-        // ===> ضع رابط الـ Web App الذي نسخته من جوجل اب سكريبت هنا <===
+        // ===> ضع رابط الـ Web App الجديد هنا <===
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyPMfMDJNHe3JQ4x2ZiRUKejIoZc3ZSWCbeaAFyKd4HBrEjam-OTo6UjNf-Ba7fP94n/exec';
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -48,32 +60,28 @@
 
         const container = document.getElementById('pdf-container');
         const statusMessage = document.getElementById('status-message');
+        const mask = document.getElementById('mask');
 
         if (certificateId) {
-            fetch(`${SCRIPT_URL}?id=${certificateId}`)
+            fetch(`${SCRIPT_URL}?certificate=${certificateId}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        const byteCharacters = atob(data.base64);
-                        const byteNumbers = new Array(byteCharacters.length);
-                        for (let i = 0; i < byteCharacters.length; i++) {
-                            byteNumbers[i] = byteCharacters.charCodeAt(i);
-                        }
-                        const byteArray = new Uint8Array(byteNumbers);
-                        const blob = new Blob([byteArray], {type: 'application/pdf'});
-                        
-                        const blobUrl = URL.createObjectURL(blob);
-                        container.innerHTML = `<iframe src="${blobUrl}#toolbar=0" allow="autoplay"></iframe>`;
+                        // حقن رابط العرض المباشر في الـ iframe
+                        container.innerHTML = `<div class="hide-popout-mask"></div><iframe src="${data.url}" allow="autoplay"></iframe>`;
                     } else {
+                        mask.style.display = 'none';
                         statusMessage.innerHTML = `<span style="color:red;">عذراً:</span> ${data.message}`;
                     }
                 })
                 .catch(error => {
                     console.error('Fetch Error:', error);
+                    mask.style.display = 'none';
                     statusMessage.innerHTML = '<span style="color:red;">حدث خطأ في الاتصال بقاعدة البيانات.</span>';
                 });
         } else {
-            statusMessage.innerHTML = 'الرابط غير مكتمل، يرجى التأكد من وجود رقم الشهادة.';
+            mask.style.display = 'none';
+            statusMessage.innerHTML = 'الرابط غير مكتمل، يرجى التأكد من وجود رقم العرض.';
         }
     </script>
 
