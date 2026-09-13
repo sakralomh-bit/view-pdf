@@ -87,10 +87,6 @@
             const url = URL.createObjectURL(blob); // ⚡ أسرع بكثير من base64
 
             root.innerHTML = `
-                <div class="toolbar">
-                    <h3>📄 عرض الوثيقة</h3>
-                    <button onclick="window.open('${url}', '_blank')">🔗 فتح كامل الصفحة</button>
-                </div>
                 <div class="doc-container">
                     <iframe src="${url}" class="doc-content" type="application/pdf"></iframe>
                 </div>
