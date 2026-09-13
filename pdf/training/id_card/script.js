@@ -55,28 +55,50 @@ function base64ToBlob(b64, mime) {
     return new Blob([bytes], { type: mime });
 }
 
-function renderPDF(data) {
+// ضبط مسار worker لمكتبة PDF.js
+pdfjsLib.GlobalWorkerOptions.workerSrc = 
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+async function renderPDF(data) {
     const blob = base64ToBlob(data.base64, data.mimeType);
     const url = URL.createObjectURL(blob);
     
     root.innerHTML = `
-        <div class="doc-container">
-            <iframe src="${url}#zoom=100" 
-                    class="doc-content" 
-                    type="application/pdf"
-                    style="transform: scale(1.0); transform-origin: top center;">
-            </iframe>
+        <div class="doc-container" style="overflow-y:auto; background:#525659;">
+            <div id="pdf-viewer" style="display:flex; flex-direction:column; align-items:center; padding:10px;"></div>
         </div>
     `;
     
-    // منع التكبير بالقوة
-    setTimeout(() => {
-        const iframe = document.querySelector('iframe');
-        if (iframe) {
-            iframe.style.transform = 'scale(1.0)';
-            iframe.parentElement.style.overflow = 'hidden';
+    try {
+        const loadingTask = pdfjsLib.getDocument(url);
+        const pdf = await loadingTask.promise;
+        const viewer = document.getElementById('pdf-viewer');
+        
+        // عرض جميع الصفحات (لشهادة عادة صفحة واحدة)
+        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+            const page = await pdf.getPage(pageNum);
+            const containerWidth = Math.min(window.innerWidth, 900);
+            const viewport = page.getViewport({ scale: 1 });
+            const scale = containerWidth / viewport.width;
+            const scaledViewport = page.getViewport({ scale });
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = scaledViewport.width;
+            canvas.height = scaledViewport.height;
+            canvas.style.marginBottom = '10px';
+            canvas.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+            canvas.style.background = '#fff';
+            viewer.appendChild(canvas);
+            
+            await page.render({
+                canvasContext: canvas.getContext('2d'),
+                viewport: scaledViewport
+            }).promise;
         }
-    }, 100);
+    } catch (err) {
+        console.error(err);
+        showError('⚠️ تعذّر عرض الشهادة.');
+    }
 }
 function renderImage(data) {
     root.innerHTML = `
