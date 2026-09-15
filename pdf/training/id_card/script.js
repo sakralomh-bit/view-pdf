@@ -13,7 +13,7 @@ if (!certificateId) {
         method: 'GET',
         mode: 'cors',
         redirect: 'follow',
-        cache: 'no-cache' // يمنع متصفح الجوال من استخدام استجابة قديمة مخزنة
+        cache: 'no-cache'
     })
     .then(async res => {
         if (!res.ok) throw new Error(`خطأ في الخادم: ${res.status}`);
@@ -21,7 +21,7 @@ if (!certificateId) {
         if (contentType && contentType.includes("application/json")) {
             return res.json();
         } else {
-            throw new Error("الخادم لم يعد بيانات JSON (تحقق من أذونات النشر)");
+            throw new Error("الخادم لم يعد بيانات JSON");
         }
     })
     .then(data => {
@@ -42,7 +42,6 @@ if (!certificateId) {
     });
 }
 
-// ================= دوال الكمبيوتر =================
 function renderPDFDesktop(data) {
     const blob = base64ToBlob(data.base64, data.mimeType);
     const url = URL.createObjectURL(blob);
@@ -52,7 +51,6 @@ function renderPDFDesktop(data) {
         </div>`;
 }
 
-// ================= دوال الجوال =================
 function loadPDFjsForMobile(data) {
     root.innerHTML = `<div class="doc-container" style="background:#f0f2f5; flex-direction:column;">
         <div class="loader"></div>
@@ -75,7 +73,6 @@ async function renderPDFMobile(data) {
         const blob = base64ToBlob(data.base64, data.mimeType);
         const url = URL.createObjectURL(blob);
         
-        // 1. تفعيل دعم الخطوط العربية لمنع تداخل وتراكب الحروف
         const loadingTask = pdfjsLib.getDocument({
             url: url,
             cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
@@ -92,24 +89,20 @@ async function renderPDFMobile(data) {
             const containerWidth = Math.min(window.innerWidth - 20, 800);
             const viewport = page.getViewport({ scale: 1 });
 
-            // 2. الأبعاد المنطقية (التي ستظهر على الشاشة بنسب صحيحة تماماً)
             const cssWidth = containerWidth;
             const cssHeight = (cssWidth * viewport.height) / viewport.width;
 
-            // 3. الأبعاد الفعلية للرسم (مضروبة في dpr للحصول على وضوح فائق بدون تكبير عشوائي)
             const renderScale = (cssWidth / viewport.width) * dpr;
             const scaledViewport = page.getViewport({ scale: renderScale });
 
             const canvas = document.createElement('canvas');
             
-            // دقة الرسم الداخلية (أعداد صحيحة لمنع الفراغات بين السطور)
             canvas.width = Math.floor(scaledViewport.width);
             canvas.height = Math.floor(scaledViewport.height);
 
-            // 4. تحديد أبعاد العرض على الشاشة بصرامة لمنع أي تمدد أو تشوه
             canvas.style.width = `${cssWidth}px`;
             canvas.style.height = `${cssHeight}px`;
-            canvas.style.flexShrink = '0'; // يمنع انكماش العنصر داخل Flexbox
+            canvas.style.flexShrink = '0';
             canvas.style.marginBottom = '10px';
             canvas.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
             canvas.style.background = '#fff';
@@ -124,7 +117,6 @@ async function renderPDFMobile(data) {
     }
 }
 
-// ================= دوال مشتركة =================
 function base64ToBlob(b64, mime) {
     const binary = atob(b64);
     const bytes = new Uint8Array(binary.length);
