@@ -13,7 +13,7 @@ if (!certificateId) {
         method: 'GET',
         mode: 'cors',
         redirect: 'follow',
-        cache: 'no-cache' // منع الكاش
+        cache: 'no-cache'
     })
     .then(async res => {
         if (!res.ok) throw new Error(`خطأ في الخادم: ${res.status}`);
@@ -23,10 +23,16 @@ if (!certificateId) {
     })
     .then(data => {
         if (!data.success) return showError(`⚠️ ${data.message}`);
+        
         if (data.mimeType.includes('image')) {
             renderImage(data);
         } else {
-            isMobile ? loadPDFjsForMobile(data) : renderPDFDesktop(data);
+            // التوجيه حسب نوع الجهاز
+            if (isMobile) {
+                triggerMobileDownload(data); // الحل الجديد للجوال
+            } else {
+                renderPDFDesktop(data); // العرض العادي للكمبيوتر
+            }
         }
     })
     .catch((err) => {
@@ -35,81 +41,65 @@ if (!certificateId) {
     });
 }
 
+// ================= دوال الكمبيوتر =================
 function renderPDFDesktop(data) {
     const blob = base64ToBlob(data.base64, data.mimeType);
-    root.innerHTML = `<div class="doc-container"><iframe src="${URL.createObjectURL(blob)}#zoom=100" class="doc-content" type="application/pdf"></iframe></div>`;
+    const url = URL.createObjectURL(blob);
+    root.innerHTML = `
+        <div class="doc-container">
+            <iframe src="${url}#zoom=100" class="doc-content" type="application/pdf"></iframe>
+        </div>`;
 }
 
-function loadPDFjsForMobile(data) {
-    root.innerHTML = `<div class="doc-container" style="flex-direction:column;"><div class="loader"></div><div style="color:#666; margin-top:10px;">جاري التجهيز...</div></div>`;
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-    script.onload = () => {
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        renderPDFMobile(data);
-    };
-    document.head.appendChild(script);
-}
+// ================= دوال الجوال (تنزيل/فتح مباشر) =================
+function triggerMobileDownload(data) {
+    root.innerHTML = `
+        <div class="doc-container" style="flex-direction:column; background:#fff; color:#333; text-align:center; padding:20px;">
+            <div class="loader"></div>
+            <p style="font-weight:bold; margin-top:15px;">جاري تجهيز الملف...</p>
+            <p style="font-size:0.9em; color:#666; margin-top:5px;">سيتم فتح الملف أو تنزيله تلقائياً.</p>
+            <p style="font-size:0.85em; color:#888; margin-top:10px;">إذا لم يبدأ تلقائياً، اضغط على الزر أدناه:</p>
+            <a id="manual-download-btn" href="#" style="background:#3498db; color:#fff; padding:10px 20px; border-radius:5px; text-decoration:none; margin-top:15px; display:inline-block; font-weight:bold;">اضغط هنا لفتح/تنزيل الملف</a>
+        </div>`;
 
-async function renderPDFMobile(data) {
-    root.innerHTML = `<div class="doc-container" style="overflow-y:auto; padding:10px; background:#525659;"><div id="pdf-viewer" style="display:flex; flex-direction:column; align-items:center;"></div></div>`;
     try {
         const blob = base64ToBlob(data.base64, data.mimeType);
         const url = URL.createObjectURL(blob);
+        const fileName = `Certificate_${certificateId}.pdf`;
+
+        // إنشاء رابط مؤقت للتحفيز التلقائي
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName; // يعمل على Android
+        a.target = '_blank';    // ضروري جداً لـ iOS Safari لفتحه في العارض الأصلي
         
-        // تفعيل خرائط الخطوط لدعم العربية
-        const loadingTask = pdfjsLib.getDocument({
-            url: url,
-            cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
-            cMapPacked: true,
-            standardFontDataUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/standard_fonts/',
-            disableFontFace: false,   // السماح بتحميل الخطوط المضمنة
-            useSystemFonts: true       // استخدام خطوط النظام كاحتياطي
-        });
-        
-        const pdf = await loadingTask.promise;
-        const viewer = document.getElementById('pdf-viewer');
-        const dpr = window.devicePixelRatio || 1;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
 
-        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-            const page = await pdf.getPage(pageNum);
-            const containerWidth = Math.min(window.innerWidth - 20, 800);
-            const viewport = page.getViewport({ scale: 1 });
-
-            const cssWidth = containerWidth;
-            const cssHeight = (cssWidth * viewport.height) / viewport.width;
-            const renderScale = (cssWidth / viewport.width) * dpr;
-            const scaledViewport = page.getViewport({ scale: renderScale });
-
-            const canvas = document.createElement('canvas');
-            canvas.width = Math.floor(scaledViewport.width);
-            canvas.height = Math.floor(scaledViewport.height);
-
-            // تحديد الأبعاد بصرامة لمنع أي تمدد (بدون auto أو 100%)
-            canvas.style.width = `${cssWidth}px`;
-            canvas.style.height = `${cssHeight}px`;
-            canvas.style.flexShrink = '0';
-            canvas.style.marginBottom = '10px';
-            canvas.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
-            canvas.style.background = '#fff';
-            canvas.style.display = 'block';
-
-            viewer.appendChild(canvas);
-            await page.render({ canvasContext: canvas.getContext('2d'), viewport: scaledViewport }).promise;
+        // تحديث الزر اليدوي احتياطياً
+        const manualBtn = document.getElementById('manual-download-btn');
+        if (manualBtn) {
+            manualBtn.href = url;
+            manualBtn.download = fileName;
         }
     } catch (err) {
         console.error(err);
-        showError('⚠️ تعذّر عرض الشهادة.');
+        showError('⚠️ حدث خطأ أثناء تجهيز الملف.');
     }
 }
 
+// ================= دوال مشتركة =================
 function base64ToBlob(b64, mime) {
     const bytes = new Uint8Array(atob(b64).split('').map(c => c.charCodeAt(0)));
     return new Blob([bytes], { type: mime });
 }
 
 function renderImage(data) {
-    root.innerHTML = `<div class="doc-container"><img src="data:${data.mimeType};base64,${data.base64}" class="doc-content" style="object-fit: contain;" alt="وثيقة" /></div>`;
+    root.innerHTML = `
+        <div class="doc-container">
+            <img src="data:${data.mimeType};base64,${data.base64}" class="doc-content" style="object-fit: contain;" alt="وثيقة" />
+        </div>`;
 }
 
 function showError(msg) {
