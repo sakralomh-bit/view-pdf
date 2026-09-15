@@ -57,60 +57,58 @@ function renderPDFDesktop(data) {
 }
 
 // ================= دوال الجوال (الجديدة) =================
-function loadPDFjsForMobile(data) {
-    root.innerHTML = `<div class="doc-container" style="background:#f0f2f5;"><div class="loader"></div><div style="text-align:center; color:#666;">جاري تجهيز العرض للجوال...</div></div>`;
-
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-    script.onload = () => {
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        renderPDFMobile(data);
-    };
-    document.head.appendChild(script);
-}
-
 async function renderPDFMobile(data) {
     root.innerHTML = `<div class="doc-container" style="overflow-y:auto; padding:10px; background:#525659;"><div id="pdf-viewer" style="display:flex; flex-direction:column; align-items:center;"></div></div>`;
 
     try {
         const blob = base64ToBlob(data.base64, data.mimeType);
         const url = URL.createObjectURL(blob);
-        const loadingTask = pdfjsLib.getDocument(url);
+        
+        // 1. تفعيل دعم الخطوط (CMaps) لضمان عرض النصوص العربية والإنجليزية بدقة
+        const loadingTask = pdfjsLib.getDocument({
+            url: url,
+            cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
+            cMapPacked: true,
+            standardFontDataUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/standard_fonts/'
+        });
         const pdf = await loadingTask.promise;
         const viewer = document.getElementById('pdf-viewer');
 
-        const dpr = window.devicePixelRatio || 1;
+        // 2. ضمان دقة عالية (على الأقل 2x للجوال)
+        const dpr = Math.max(window.devicePixelRatio || 1, 2);
 
         for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
             const page = await pdf.getPage(pageNum);
             const containerWidth = Math.min(window.innerWidth - 20, 800);
             const viewport = page.getViewport({ scale: 1 });
 
-            // 1. الأبعاد المنطقية (التي ستظهر على الشاشة بنسب صحيحة)
             const cssWidth = containerWidth;
             const cssHeight = (cssWidth * viewport.height) / viewport.width;
 
-            // 2. الأبعاد الفعلية للرسم (مضاعفة بـ dpr للحصول على وضوح فائق)
             const renderScale = (cssWidth / viewport.width) * dpr;
             const scaledViewport = page.getViewport({ scale: renderScale });
 
             const canvas = document.createElement('canvas');
+            canvas.width = Math.floor(scaledViewport.width);
+            canvas.height = Math.floor(scaledViewport.height);
 
-            // دقة الرسم الداخلية (عالية الدقة)
-            canvas.width = scaledViewport.width;
-            canvas.height = scaledViewport.height;
+            // 3. إعدادات Context لتحسين حدة النص ومنع التشويش
+            const context = canvas.getContext('2d', { alpha: false });
+            context.imageSmoothingEnabled = true;
+            context.imageSmoothingQuality = 'high';
+            if ('textRendering' in context) {
+                context.textRendering = 'optimizeLegibility';
+            }
 
-            // حجم العرض على الشاشة (ثابت ومحدد بدقة لمنع أي تمديد أو تشوه)
+            // 4. تحديد الأبعاد الظاهرة بدقة لمنع أي تشوه
             canvas.style.width = `${cssWidth}px`;
             canvas.style.height = `${cssHeight}px`;
-
-            // تنسيقات جمالية
             canvas.style.marginBottom = '10px';
             canvas.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
             canvas.style.background = '#fff';
 
             viewer.appendChild(canvas);
-            await page.render({ canvasContext: canvas.getContext('2d'), viewport: scaledViewport }).promise;
+            await page.render({ canvasContext: context, viewport: scaledViewport }).promise;
         }
     } catch (err) {
         console.error(err);
