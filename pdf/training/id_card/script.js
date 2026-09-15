@@ -62,7 +62,9 @@ async function renderPDFMobile(data) {
             url: url,
             cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
             cMapPacked: true,
-            standardFontDataUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/standard_fonts/'
+            standardFontDataUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/standard_fonts/',
+            disableFontFace: false,   // السماح بتحميل الخطوط المضمنة
+            useSystemFonts: true       // استخدام خطوط النظام كاحتياطي
         });
         
         const pdf = await loadingTask.promise;
