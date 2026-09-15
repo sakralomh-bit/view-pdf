@@ -57,6 +57,5 @@ html, body {
 }
 #pdf-viewer canvas {
     max-width: 100%;
-    height: auto;
     display: block;
 }
