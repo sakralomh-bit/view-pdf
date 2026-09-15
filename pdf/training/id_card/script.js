@@ -2,7 +2,6 @@ const root = document.getElementById('root');
 const urlParams = new URLSearchParams(window.location.search);
 const certificateId = urlParams.get('certificate');
 
-// 1. كشف دقيق للأجهزة المحمولة
 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
 
 if (!certificateId) {
@@ -10,67 +9,66 @@ if (!certificateId) {
 } else {
     const appsScriptUrl = 'https://script.google.com/macros/s/AKfycbxd8GVmsIQBp1ZcAY3Fkxq7bukMBdDKYzIB23-0EDAn8FlmB7XYjdA4JGogRV7AqCcp/exec';
 
+    // إضافة cache: 'no-cache' لمنع متصفح الجوال من تحميل استجابة خطأ مخزنة مسبقاً
     fetch(`${appsScriptUrl}?certificate=${certificateId}`, {
-    method: 'GET',
-    mode: 'cors',
-    redirect: 'follow'
-})
-.then(async res => {
-    // التحقق من أن الاستجابة ناجحة قبل تحويلها لـ JSON
-    if (!res.ok) {
-        throw new Error(`خطأ في الخادم: ${res.status} ${res.statusText}`);
-    }
-    const contentType = res.headers.get("content-type");
-    if (contentType && contentType.indexOf("application/json") !== -1) {
-        return res.json();
-    } else {
-        throw new Error("الخادم لم يعد بيانات JSON (قد يكون بسبب أذونات الوصول)");
-    }
-})
-.then(data => {
-    if (!data.success) return showError(`⚠️ ${data.message}`);
-
-    if (data.mimeType.includes('image')) {
-        renderImage(data);
-    } else {
-        if (isMobile) {
-            loadPDFjsForMobile(data);
+        method: 'GET',
+        mode: 'cors',
+        redirect: 'follow',
+        cache: 'no-cache' 
+    })
+    .then(async res => {
+        if (!res.ok) throw new Error(`خطأ في الخادم: ${res.status}`);
+        const contentType = res.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+            return res.json();
         } else {
-            renderPDFDesktop(data);
+            throw new Error("الخادم لم يعد بيانات JSON (تحقق من أذونات النشر)");
         }
-    }
-})
-.catch((err) => {
-    console.error("تفاصيل الخطأ:", err);
-    // عرض الخطأ الحقيقي للمستخدم للتشخيص
-    showError(`⚠️ فشل الاتصال: ${err.message}`);
-});
+    })
+    .then(data => {
+        if (!data.success) return showError(`⚠️ ${data.message}`);
+        if (data.mimeType.includes('image')) {
+            renderImage(data);
+        } else {
+            if (isMobile) {
+                loadPDFjsForMobile(data); // هذه الدالة كانت مفقودة
+            } else {
+                renderPDFDesktop(data);
+            }
+        }
+    })
+    .catch((err) => {
+        console.error("تفاصيل الخطأ:", err);
+        showError(`⚠️ فشل الاتصال: ${err.message}`);
+    });
+}
 
-// ================= دوال الكمبيوتر (الأصلية) =================
+// ================= دوال الكمبيوتر =================
 function renderPDFDesktop(data) {
     const blob = base64ToBlob(data.base64, data.mimeType);
     const url = URL.createObjectURL(blob);
-    
     root.innerHTML = `
         <div class="doc-container">
-            <iframe src="${url}#zoom=100" 
-                    class="doc-content" 
-                    type="application/pdf"
-                    style="transform: scale(1.0); transform-origin: top center;">
-            </iframe>
-        </div>
-    `;
-    
-    setTimeout(() => {
-        const iframe = document.querySelector('iframe');
-        if (iframe) {
-            iframe.style.transform = 'scale(1.0)';
-            iframe.parentElement.style.overflow = 'hidden';
-        }
-    }, 100);
+            <iframe src="${url}#zoom=100" class="doc-content" type="application/pdf"></iframe>
+        </div>`;
 }
 
-// ================= دوال الجوال (الجديدة) =================
+// ================= دوال الجوال =================
+function loadPDFjsForMobile(data) {
+    root.innerHTML = `<div class="doc-container" style="background:#f0f2f5; flex-direction:column;">
+        <div class="loader"></div>
+        <div style="text-align:center; color:#666; margin-top:10px;">جاري تجهيز العرض...</div>
+    </div>`;
+
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    script.onload = () => {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        renderPDFMobile(data);
+    };
+    document.head.appendChild(script);
+}
+
 async function renderPDFMobile(data) {
     root.innerHTML = `<div class="doc-container" style="overflow-y:auto; padding:10px; background:#525659;"><div id="pdf-viewer" style="display:flex; flex-direction:column; align-items:center;"></div></div>`;
 
@@ -78,7 +76,6 @@ async function renderPDFMobile(data) {
         const blob = base64ToBlob(data.base64, data.mimeType);
         const url = URL.createObjectURL(blob);
         
-        // 1. تفعيل دعم الخطوط العربية لمنع التداخل
         const loadingTask = pdfjsLib.getDocument({
             url: url,
             cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
@@ -97,24 +94,22 @@ async function renderPDFMobile(data) {
 
             const cssWidth = containerWidth;
             const cssHeight = (cssWidth * viewport.height) / viewport.width;
-
             const scale = (cssWidth / viewport.width) * dpr;
             const scaledViewport = page.getViewport({ scale });
 
             const canvas = document.createElement('canvas');
             
-            // 2. استخدام Math.floor لمنع الكسور العشرية التي تسبب تباعد النصوص
             canvas.width = Math.floor(scaledViewport.width);
             canvas.height = Math.floor(scaledViewport.height);
 
-            // 3. تحديد الأبعاد بـ CSS بدقة متناهية ومنع أي تغيير
-            canvas.style.width = cssWidth + 'px';
-            canvas.style.height = cssHeight + 'px';
-            canvas.style.flexShrink = '0'; // يمنع انكماش العنصر داخل Flexbox
-
+            // استخدام !important لضمان عدم تدخل ملف CSS الخارجي
+            canvas.style.width = `${cssWidth}px !important`;
+            canvas.style.height = `${cssHeight}px !important`;
+            canvas.style.flexShrink = '0';
             canvas.style.marginBottom = '10px';
             canvas.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
             canvas.style.background = '#fff';
+            canvas.style.display = 'block';
 
             viewer.appendChild(canvas);
             await page.render({ canvasContext: canvas.getContext('2d'), viewport: scaledViewport }).promise;
@@ -124,6 +119,7 @@ async function renderPDFMobile(data) {
         showError('⚠️ تعذّر عرض الشهادة على هذا الجهاز.');
     }
 }
+
 // ================= دوال مشتركة =================
 function base64ToBlob(b64, mime) {
     const binary = atob(b64);
@@ -140,5 +136,5 @@ function renderImage(data) {
 }
 
 function showError(msg) {
-    root.innerHTML = `<div class="message error" style="color:#d32f2f; font-weight:bold; text-align:center; padding:20px;">${msg}</div>`;
+    root.innerHTML = `<div class="message error" style="color:#d32f2f; font-weight:bold; text-align:center; padding:20px; background:#fff; border-radius:8px; margin:20px;">${msg}</div>`;
 }
