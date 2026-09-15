@@ -10,7 +10,10 @@ if (!certificateId) {
     const appsScriptUrl = 'https://script.google.com/macros/s/AKfycbxd8GVmsIQBp1ZcAY3Fkxq7bukMBdDKYzIB23-0EDAn8FlmB7XYjdA4JGogRV7AqCcp/exec';
 
     fetch(`${appsScriptUrl}?certificate=${certificateId}`, {
-        method: 'GET', mode: 'cors', redirect: 'follow', cache: 'no-cache'
+        method: 'GET',
+        mode: 'cors',
+        redirect: 'follow',
+        cache: 'no-cache' // منع الكاش
     })
     .then(async res => {
         if (!res.ok) throw new Error(`خطأ في الخادم: ${res.status}`);
@@ -54,7 +57,7 @@ async function renderPDFMobile(data) {
         const blob = base64ToBlob(data.base64, data.mimeType);
         const url = URL.createObjectURL(blob);
         
-        // تفعيل خرائط الخطوط لدعم العربية والخطوط المخصصة
+        // تفعيل خرائط الخطوط لدعم العربية
         const loadingTask = pdfjsLib.getDocument({
             url: url,
             cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
@@ -80,7 +83,7 @@ async function renderPDFMobile(data) {
             canvas.width = Math.floor(scaledViewport.width);
             canvas.height = Math.floor(scaledViewport.height);
 
-            // تحديد الأبعاد بصرامة لمنع أي تمدد أو تداخل
+            // تحديد الأبعاد بصرامة لمنع أي تمدد (بدون auto أو 100%)
             canvas.style.width = `${cssWidth}px`;
             canvas.style.height = `${cssHeight}px`;
             canvas.style.flexShrink = '0';
