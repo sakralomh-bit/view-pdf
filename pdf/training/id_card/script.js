@@ -56,10 +56,6 @@ function triggerMobileDownload(data) {
     root.innerHTML = `
         <div class="doc-container" style="flex-direction:column; background:#fff; color:#333; text-align:center; padding:20px;">
             <div class="loader"></div>
-            <p style="font-weight:bold; margin-top:15px;">جاري تجهيز الملف...</p>
-            <p style="font-size:0.9em; color:#666; margin-top:5px;">سيتم فتح الملف أو تنزيله تلقائياً.</p>
-            <p style="font-size:0.85em; color:#888; margin-top:10px;">إذا لم يبدأ تلقائياً، اضغط على الزر أدناه:</p>
-            <a id="manual-download-btn" href="#" style="background:#3498db; color:#fff; padding:10px 20px; border-radius:5px; text-decoration:none; margin-top:15px; display:inline-block; font-weight:bold;">اضغط هنا لفتح/تنزيل الملف</a>
         </div>`;
 
     try {
