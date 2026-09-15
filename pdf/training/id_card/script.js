@@ -9,12 +9,11 @@ if (!certificateId) {
 } else {
     const appsScriptUrl = 'https://script.google.com/macros/s/AKfycbxd8GVmsIQBp1ZcAY3Fkxq7bukMBdDKYzIB23-0EDAn8FlmB7XYjdA4JGogRV7AqCcp/exec';
 
-    // إضافة cache: 'no-cache' لمنع متصفح الجوال من تحميل استجابة خطأ مخزنة مسبقاً
     fetch(`${appsScriptUrl}?certificate=${certificateId}`, {
         method: 'GET',
         mode: 'cors',
         redirect: 'follow',
-        cache: 'no-cache' 
+        cache: 'no-cache' // منع متصفح الجوال من تحميل استجابة خطأ مخزنة
     })
     .then(async res => {
         if (!res.ok) throw new Error(`خطأ في الخادم: ${res.status}`);
@@ -22,7 +21,7 @@ if (!certificateId) {
         if (contentType && contentType.includes("application/json")) {
             return res.json();
         } else {
-            throw new Error("الخادم لم يعد بيانات JSON (تحقق من أذونات النشر)");
+            throw new Error("الخادم لم يعد بيانات JSON");
         }
     })
     .then(data => {
@@ -31,7 +30,7 @@ if (!certificateId) {
             renderImage(data);
         } else {
             if (isMobile) {
-                loadPDFjsForMobile(data); // هذه الدالة كانت مفقودة
+                loadPDFjsForMobile(data);
             } else {
                 renderPDFDesktop(data);
             }
@@ -76,6 +75,7 @@ async function renderPDFMobile(data) {
         const blob = base64ToBlob(data.base64, data.mimeType);
         const url = URL.createObjectURL(blob);
         
+        // 1. تفعيل دعم الخطوط العربية لمنع تداخل الحروف
         const loadingTask = pdfjsLib.getDocument({
             url: url,
             cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
@@ -92,20 +92,24 @@ async function renderPDFMobile(data) {
             const containerWidth = Math.min(window.innerWidth - 20, 800);
             const viewport = page.getViewport({ scale: 1 });
 
+            // 2. الأبعاد المنطقية (التي ستظهر على الشاشة بنسب صحيحة)
             const cssWidth = containerWidth;
             const cssHeight = (cssWidth * viewport.height) / viewport.width;
-            const scale = (cssWidth / viewport.width) * dpr;
-            const scaledViewport = page.getViewport({ scale });
+
+            // 3. الأبعاد الفعلية للرسم (مضروبة في dpr للحصول على وضوح فائق)
+            const renderScale = (cssWidth / viewport.width) * dpr;
+            const scaledViewport = page.getViewport({ scale: renderScale });
 
             const canvas = document.createElement('canvas');
             
+            // دقة الرسم الداخلية (أعداد صحيحة لمنع الفراغات)
             canvas.width = Math.floor(scaledViewport.width);
             canvas.height = Math.floor(scaledViewport.height);
 
-            // استخدام !important لضمان عدم تدخل ملف CSS الخارجي
-            canvas.style.width = `${cssWidth}px !important`;
-            canvas.style.height = `${cssHeight}px !important`;
-            canvas.style.flexShrink = '0';
+            // 4. تحديد أبعاد العرض على الشاشة بصرامة لمنع أي تمدد أو تكبير عشوائي
+            canvas.style.width = `${cssWidth}px`;
+            canvas.style.height = `${cssHeight}px`;
+            canvas.style.flexShrink = '0'; // منع انكماش العنصر داخل Flexbox
             canvas.style.marginBottom = '10px';
             canvas.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
             canvas.style.background = '#fff';
