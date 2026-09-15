@@ -10,27 +10,41 @@ if (!certificateId) {
 } else {
     const appsScriptUrl = 'https://script.google.com/macros/s/AKfycbxd8GVmsIQBp1ZcAY3Fkxq7bukMBdDKYzIB23-0EDAn8FlmB7XYjdA4JGogRV7AqCcp/exec';
 
-    fetch(`${appsScriptUrl}?certificate=${certificateId}`)
-        .then(res => res.json())
-        .then(data => {
-            if (!data.success) return showError(`⚠️ ${data.message}`);
+    fetch(`${appsScriptUrl}?certificate=${certificateId}`, {
+    method: 'GET',
+    mode: 'cors',
+    redirect: 'follow'
+})
+.then(async res => {
+    // التحقق من أن الاستجابة ناجحة قبل تحويلها لـ JSON
+    if (!res.ok) {
+        throw new Error(`خطأ في الخادم: ${res.status} ${res.statusText}`);
+    }
+    const contentType = res.headers.get("content-type");
+    if (contentType && contentType.indexOf("application/json") !== -1) {
+        return res.json();
+    } else {
+        throw new Error("الخادم لم يعد بيانات JSON (قد يكون بسبب أذونات الوصول)");
+    }
+})
+.then(data => {
+    if (!data.success) return showError(`⚠️ ${data.message}`);
 
-            if (data.mimeType.includes('image')) {
-                renderImage(data);
-            } else {
-                // 2. توجيه العرض حسب نوع الجهاز
-                if (isMobile) {
-                    loadPDFjsForMobile(data);
-                } else {
-                    renderPDFDesktop(data);
-                }
-            }
-        })
-        .catch((err) => {
-            console.error(err);
-            showError('⚠️ فشل في الاتصال بالخادم. تحقق من الإنترنت.');
-        });
-}
+    if (data.mimeType.includes('image')) {
+        renderImage(data);
+    } else {
+        if (isMobile) {
+            loadPDFjsForMobile(data);
+        } else {
+            renderPDFDesktop(data);
+        }
+    }
+})
+.catch((err) => {
+    console.error("تفاصيل الخطأ:", err);
+    // عرض الخطأ الحقيقي للمستخدم للتشخيص
+    showError(`⚠️ فشل الاتصال: ${err.message}`);
+});
 
 // ================= دوال الكمبيوتر (الأصلية) =================
 function renderPDFDesktop(data) {
