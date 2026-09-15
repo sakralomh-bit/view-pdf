@@ -64,18 +64,17 @@ async function renderPDFMobile(data) {
         const blob = base64ToBlob(data.base64, data.mimeType);
         const url = URL.createObjectURL(blob);
         
-        // 1. تفعيل دعم الخطوط (CMaps) لضمان عرض النصوص العربية والإنجليزية بدقة
+        // 1. تفعيل دعم الخطوط العربية لمنع التداخل
         const loadingTask = pdfjsLib.getDocument({
             url: url,
-            cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
+            cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
             cMapPacked: true,
-            standardFontDataUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/standard_fonts/'
+            standardFontDataUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/standard_fonts/'
         });
+        
         const pdf = await loadingTask.promise;
         const viewer = document.getElementById('pdf-viewer');
-
-        // 2. ضمان دقة عالية (على الأقل 2x للجوال)
-        const dpr = Math.max(window.devicePixelRatio || 1, 2);
+        const dpr = window.devicePixelRatio || 1;
 
         for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
             const page = await pdf.getPage(pageNum);
@@ -85,30 +84,26 @@ async function renderPDFMobile(data) {
             const cssWidth = containerWidth;
             const cssHeight = (cssWidth * viewport.height) / viewport.width;
 
-            const renderScale = (cssWidth / viewport.width) * dpr;
-            const scaledViewport = page.getViewport({ scale: renderScale });
+            const scale = (cssWidth / viewport.width) * dpr;
+            const scaledViewport = page.getViewport({ scale });
 
             const canvas = document.createElement('canvas');
+            
+            // 2. استخدام Math.floor لمنع الكسور العشرية التي تسبب تباعد النصوص
             canvas.width = Math.floor(scaledViewport.width);
             canvas.height = Math.floor(scaledViewport.height);
 
-            // 3. إعدادات Context لتحسين حدة النص ومنع التشويش
-            const context = canvas.getContext('2d', { alpha: false });
-            context.imageSmoothingEnabled = true;
-            context.imageSmoothingQuality = 'high';
-            if ('textRendering' in context) {
-                context.textRendering = 'optimizeLegibility';
-            }
+            // 3. تحديد الأبعاد بـ CSS بدقة متناهية ومنع أي تغيير
+            canvas.style.width = cssWidth + 'px';
+            canvas.style.height = cssHeight + 'px';
+            canvas.style.flexShrink = '0'; // يمنع انكماش العنصر داخل Flexbox
 
-            // 4. تحديد الأبعاد الظاهرة بدقة لمنع أي تشوه
-            canvas.style.width = `${cssWidth}px`;
-            canvas.style.height = `${cssHeight}px`;
             canvas.style.marginBottom = '10px';
             canvas.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
             canvas.style.background = '#fff';
 
             viewer.appendChild(canvas);
-            await page.render({ canvasContext: context, viewport: scaledViewport }).promise;
+            await page.render({ canvasContext: canvas.getContext('2d'), viewport: scaledViewport }).promise;
         }
     } catch (err) {
         console.error(err);
