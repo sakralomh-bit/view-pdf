@@ -56,6 +56,6 @@ html, body {
     border: none; 
 }
 #pdf-viewer canvas {
-    max-width: 100%;
     display: block;
+    /* تم حذف height: auto و max-width عمداً لمنع المتصفح من تشويه النسب */
 }
