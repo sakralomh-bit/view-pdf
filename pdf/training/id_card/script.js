@@ -79,39 +79,32 @@ async function renderPDFMobile(data) {
         const pdf = await loadingTask.promise;
         const viewer = document.getElementById('pdf-viewer');
 
-        // 1. جلب دقة الشاشة (Device Pixel Ratio)
-        const dpr = window.devicePixelRatio || 1; 
+        const dpr = window.devicePixelRatio || 1;
 
         for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
             const page = await pdf.getPage(pageNum);
             const containerWidth = Math.min(window.innerWidth - 20, 800);
             const viewport = page.getViewport({ scale: 1 });
 
-            // 2. مضاعفة الـ Scale بدقة الشاشة لزيادة حدة النص
-            const scale = (containerWidth / viewport.width) * dpr;
-            // 1. حساب الأبعاد المنطقية (التي ستظهر على الشاشة)
+            // 1. الأبعاد المنطقية (التي ستظهر على الشاشة بنسب صحيحة)
             const cssWidth = containerWidth;
             const cssHeight = (cssWidth * viewport.height) / viewport.width;
 
-            // 2. حساب دقة الرسم الفعلية (مضاعفة بـ dpr للوضوح)
-            const scale = (cssWidth / viewport.width) * dpr;
-            const scaledViewport = page.getViewport({ scale });
+            // 2. الأبعاد الفعلية للرسم (مضاعفة بـ dpr للحصول على وضوح فائق)
+            const renderScale = (cssWidth / viewport.width) * dpr;
+            const scaledViewport = page.getViewport({ scale: renderScale });
 
             const canvas = document.createElement('canvas');
 
-            // 3. تحديد الأبعاد الفعلية للبكسلات (عالية الدقة)
-            // الأبعاد الفعلية للرسم (عالية الدقة)
+            // دقة الرسم الداخلية (عالية الدقة)
             canvas.width = scaledViewport.width;
             canvas.height = scaledViewport.height;
 
-            // 4. تحديد الأبعاد الظاهرة على الشاشة (تصغير بـ dpr ليعود للحجم الطبيعي)
-            canvas.style.width = (scaledViewport.width / dpr) + 'px';
-            canvas.style.height = 'auto';
-            canvas.style.maxWidth = '100%';
-            // 3. تحديد العرض والارتفاع بـ CSS بشكل صريح لمنع التمديد
-            canvas.style.width = cssWidth + 'px';
-            canvas.style.height = cssHeight + 'px';
+            // حجم العرض على الشاشة (ثابت ومحدد بدقة لمنع أي تمديد أو تشوه)
+            canvas.style.width = `${cssWidth}px`;
+            canvas.style.height = `${cssHeight}px`;
 
+            // تنسيقات جمالية
             canvas.style.marginBottom = '10px';
             canvas.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
             canvas.style.background = '#fff';
