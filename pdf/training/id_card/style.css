@@ -1,61 +1,8 @@
-html, body {
-    margin: 0;
-    padding: 0;
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden;
-    -webkit-text-size-adjust: 100%;
-    text-size-adjust: 100%;
-    background: #f0f2f5;
-    font-family: system-ui, -apple-system, sans-serif;
-}
-
-#root {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    height: 100%;
-}
-
-.error {
-    color: #d32f2f;
-    font-weight: bold;
-}
-
-.loader {
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid #3498db;
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
-    animation: spin 1s linear infinite;
-    margin: 0 auto 15px;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-.doc-container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: #525659;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.doc-content {
-    width: 100%;
-    height: 100%;
-    border: none;
-}
-
-#pdf-viewer canvas {
-    display: block;
-}
+html, body { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; background: #f0f2f5; font-family: system-ui, -apple-system, sans-serif; }
+#root { display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; }
+.error { color: #d32f2f; font-weight: bold; }
+.loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 0 auto 15px; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.doc-container { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #525659; display: flex; justify-content: center; align-items: center; }
+.doc-content { width: 100%; height: 100%; border: none; }
+#pdf-viewer canvas { display: block; } /* تم حذف height: auto و max-width نهائياً */
