@@ -10,53 +10,35 @@ if (!certificateId) {
     const appsScriptUrl = 'https://script.google.com/macros/s/AKfycbxd8GVmsIQBp1ZcAY3Fkxq7bukMBdDKYzIB23-0EDAn8FlmB7XYjdA4JGogRV7AqCcp/exec';
 
     fetch(`${appsScriptUrl}?certificate=${certificateId}`, {
-        method: 'GET',
-        mode: 'cors',
-        redirect: 'follow',
-        cache: 'no-cache'
+        method: 'GET', mode: 'cors', redirect: 'follow', cache: 'no-cache'
     })
     .then(async res => {
         if (!res.ok) throw new Error(`خطأ في الخادم: ${res.status}`);
         const contentType = res.headers.get("content-type");
-        if (contentType && contentType.includes("application/json")) {
-            return res.json();
-        } else {
-            throw new Error("الخادم لم يعد بيانات JSON");
-        }
+        if (contentType && contentType.includes("application/json")) return res.json();
+        throw new Error("الخادم لم يعد بيانات JSON");
     })
     .then(data => {
         if (!data.success) return showError(`⚠️ ${data.message}`);
         if (data.mimeType.includes('image')) {
             renderImage(data);
         } else {
-            if (isMobile) {
-                loadPDFjsForMobile(data);
-            } else {
-                renderPDFDesktop(data);
-            }
+            isMobile ? loadPDFjsForMobile(data) : renderPDFDesktop(data);
         }
     })
     .catch((err) => {
-        console.error("تفاصيل الخطأ:", err);
+        console.error(err);
         showError(`⚠️ فشل الاتصال: ${err.message}`);
     });
 }
 
 function renderPDFDesktop(data) {
     const blob = base64ToBlob(data.base64, data.mimeType);
-    const url = URL.createObjectURL(blob);
-    root.innerHTML = `
-        <div class="doc-container">
-            <iframe src="${url}#zoom=100" class="doc-content" type="application/pdf"></iframe>
-        </div>`;
+    root.innerHTML = `<div class="doc-container"><iframe src="${URL.createObjectURL(blob)}#zoom=100" class="doc-content" type="application/pdf"></iframe></div>`;
 }
 
 function loadPDFjsForMobile(data) {
-    root.innerHTML = `<div class="doc-container" style="background:#f0f2f5; flex-direction:column;">
-        <div class="loader"></div>
-        <div style="text-align:center; color:#666; margin-top:10px;">جاري تجهيز العرض...</div>
-    </div>`;
-
+    root.innerHTML = `<div class="doc-container" style="flex-direction:column;"><div class="loader"></div><div style="color:#666; margin-top:10px;">جاري التجهيز...</div></div>`;
     const script = document.createElement('script');
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
     script.onload = () => {
@@ -68,11 +50,11 @@ function loadPDFjsForMobile(data) {
 
 async function renderPDFMobile(data) {
     root.innerHTML = `<div class="doc-container" style="overflow-y:auto; padding:10px; background:#525659;"><div id="pdf-viewer" style="display:flex; flex-direction:column; align-items:center;"></div></div>`;
-
     try {
         const blob = base64ToBlob(data.base64, data.mimeType);
         const url = URL.createObjectURL(blob);
         
+        // تفعيل خرائط الخطوط لدعم العربية والخطوط المخصصة
         const loadingTask = pdfjsLib.getDocument({
             url: url,
             cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
@@ -91,15 +73,14 @@ async function renderPDFMobile(data) {
 
             const cssWidth = containerWidth;
             const cssHeight = (cssWidth * viewport.height) / viewport.width;
-
             const renderScale = (cssWidth / viewport.width) * dpr;
             const scaledViewport = page.getViewport({ scale: renderScale });
 
             const canvas = document.createElement('canvas');
-            
             canvas.width = Math.floor(scaledViewport.width);
             canvas.height = Math.floor(scaledViewport.height);
 
+            // تحديد الأبعاد بصرامة لمنع أي تمدد أو تداخل
             canvas.style.width = `${cssWidth}px`;
             canvas.style.height = `${cssHeight}px`;
             canvas.style.flexShrink = '0';
@@ -113,22 +94,17 @@ async function renderPDFMobile(data) {
         }
     } catch (err) {
         console.error(err);
-        showError('⚠️ تعذّر عرض الشهادة على هذا الجهاز.');
+        showError('⚠️ تعذّر عرض الشهادة.');
     }
 }
 
 function base64ToBlob(b64, mime) {
-    const binary = atob(b64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    const bytes = new Uint8Array(atob(b64).split('').map(c => c.charCodeAt(0)));
     return new Blob([bytes], { type: mime });
 }
 
 function renderImage(data) {
-    root.innerHTML = `
-        <div class="doc-container">
-            <img src="data:${data.mimeType};base64,${data.base64}" class="doc-content" style="object-fit: contain; max-width: 100%; max-height: 100%;" alt="وثيقة" />
-        </div>`;
+    root.innerHTML = `<div class="doc-container"><img src="data:${data.mimeType};base64,${data.base64}" class="doc-content" style="object-fit: contain;" alt="وثيقة" /></div>`;
 }
 
 function showError(msg) {
